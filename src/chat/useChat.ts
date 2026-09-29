@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import { apiErrorMessage } from "../api/errorMessage";
+import { isTerminalStatus } from "../runs/run";
 import {
-  isTerminalStatus,
   parseChatConversation,
   parseChatRun,
   parseEnqueuedRun,

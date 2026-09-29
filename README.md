@@ -103,6 +103,29 @@ counts and model names. Message content and tool arguments are never rendered:
 an `mcp_tool_call` shows the server, tool, status and phase, so the call is
 visible but what it was called with is not.
 
+## Group rooms
+
+The room screen runs a bounded group of 2–5 enabled agents over one task at a
+time. The order the agents are selected in is the speaking order, and the
+moderator is one of the participants. The create button is only enabled for a
+named room whose selected participants number 2–5 and whose moderator is among
+them — the same constraints `POST /rooms` enforces again.
+
+A task is queued with `POST /rooms/{id}/runs`, which answers `202` with the run
+id; the console follows it with `GET /runs/{run_id}` until the platform reports
+`completed` or `failed`, so the `turns` and the status line update live. A
+second task waits for the running one. A turn whose `phase` is
+`moderator_summary` is the moderator's closing answer (also carried as
+`final_answer`); every other turn is a participant contribution. A failed run
+shows its `error_code`.
+
+The API has no "list rooms" endpoint, so the browser keeps the ids it created
+or opened in `localStorage` for quick selection; the room records and the task
+history live in the server database, and another browser or device does not see
+this list. Opening a room loads `GET /rooms/{id}` and `GET /rooms/{id}/runs`,
+and a refresh resumes the newest run still in `queued`/`running` instead of
+showing it as finished.
+
 ## Checks
 
 ```sh

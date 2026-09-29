@@ -50,29 +50,6 @@ export interface EnqueuedRun {
 }
 
 /**
- * A run is terminal only when the platform says so. Anything else (including a
- * status this console does not know yet) keeps being followed.
- */
-export function isTerminalStatus(status: string): boolean {
-  return status === "completed" || status === "failed";
-}
-
-export function isActiveStatus(status: string): boolean {
-  return status === "queued" || status === "running";
-}
-
-const RUN_STATUS_LABELS: Record<string, string> = {
-  queued: "Sırada",
-  running: "Çalışıyor",
-  completed: "Tamamlandı",
-  failed: "Başarısız",
-};
-
-export function runStatusLabel(status: string): string {
-  return RUN_STATUS_LABELS[status] ?? status;
-}
-
-/**
  * The run of the newest user message. A run the server still holds in
  * `queued`/`running` is what the screen resumes after a reload.
  */

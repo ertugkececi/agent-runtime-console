@@ -6,8 +6,9 @@ import { AgentCatalog } from "./agents/AgentCatalog";
 import { LoginScreen } from "./auth/LoginScreen";
 import { useAuthSession } from "./auth/useAuthSession";
 import { ChatScreen } from "./chat/ChatScreen";
+import { RoomScreen } from "./rooms/RoomScreen";
 
-type Screen = "chat" | "agents";
+type Screen = "chat" | "rooms" | "agents";
 
 export function App() {
   const auth = useAuthSession();
@@ -48,13 +49,26 @@ export function App() {
         </button>{" "}
         <button
           type="button"
+          aria-pressed={screen === "rooms"}
+          onClick={() => setScreen("rooms")}
+        >
+          Grup odaları
+        </button>{" "}
+        <button
+          type="button"
           aria-pressed={screen === "agents"}
           onClick={() => setScreen("agents")}
         >
           Ajanlar
         </button>
       </nav>
-      {screen === "chat" ? <ChatScreen /> : <AgentCatalog />}
+      {screen === "chat" ? (
+        <ChatScreen />
+      ) : screen === "rooms" ? (
+        <RoomScreen />
+      ) : (
+        <AgentCatalog />
+      )}
     </main>
   );
 }
