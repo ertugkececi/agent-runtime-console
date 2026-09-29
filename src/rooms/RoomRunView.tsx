@@ -1,4 +1,5 @@
 import { isActiveStatus, runStatusLabel } from "../runs/run";
+import { EmptyState } from "../ui/Status";
 import { splitRoomTurns, type RoomRun } from "./room";
 
 /**
@@ -23,16 +24,20 @@ export function RoomRunView({ run }: { run: RoomRun }) {
           {run.error_code !== null ? ` · ${run.error_code}` : ""}
         </small>
       </p>
-      <ol aria-label="Katkılar">
-        {participantTurns.map((turn) => (
-          <li key={turn.position}>
-            <strong>{turn.agent_name}:</strong>{" "}
-            {turn.content !== null && turn.content !== ""
-              ? turn.content
-              : `Durum: ${runStatusLabel(turn.status)}`}
-          </li>
-        ))}
-      </ol>
+      {participantTurns.length === 0 ? (
+        <EmptyState>Henüz katkı yok.</EmptyState>
+      ) : (
+        <ol aria-label="Katkılar">
+          {participantTurns.map((turn) => (
+            <li key={turn.position}>
+              <strong>{turn.agent_name}:</strong>{" "}
+              {turn.content !== null && turn.content !== ""
+                ? turn.content
+                : `Durum: ${runStatusLabel(turn.status)}`}
+            </li>
+          ))}
+        </ol>
+      )}
       {finalAnswer !== null ? (
         <p>
           <strong>{summaryLabel}:</strong> {finalAnswer}

@@ -22,3 +22,8 @@ export function apiErrorMessage(error: unknown, status: number): string {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+/** The one-line form of an error that never reached the API client. */
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : "Bilinmeyen hata.";
+}

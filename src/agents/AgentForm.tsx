@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 
+import { errorText } from "../api/errorMessage";
+import { EmptyState, ErrorState, LoadingState, StatusLine } from "../ui/Status";
 import {
   nextEffort,
   parseCapabilities,
@@ -38,10 +40,6 @@ function effortLabel(value: string): string {
     return "Model varsayılanı";
   }
   return EFFORT_LABELS[value] ?? value;
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "Bilinmeyen hata.";
 }
 
 export function AgentForm({
@@ -226,14 +224,14 @@ export function AgentForm({
             required
           />
         )}
-        {modelsQuery.isPending ? <small> Modeller yükleniyor…</small> : null}
-        {modelsQuery.isError ? (
-          <small role="alert"> Modeller yüklenemedi: {errorText(modelsQuery.error)}</small>
-        ) : null}
-        {modelsQuery.isSuccess && models.length === 0 ? (
-          <small> Bu sağlayıcı için seçilebilir model yok.</small>
-        ) : null}
       </p>
+      {modelsQuery.isPending ? <LoadingState>Modeller yükleniyor…</LoadingState> : null}
+      {modelsQuery.isError ? (
+        <ErrorState>Modeller yüklenemedi: {errorText(modelsQuery.error)}</ErrorState>
+      ) : null}
+      {modelsQuery.isSuccess && models.length === 0 ? (
+        <EmptyState>Bu sağlayıcı için seçilebilir model yok.</EmptyState>
+      ) : null}
       {effortOptions.length > 0 ? (
         <p>
           <label htmlFor="agent-model-effort">Düşünme eforu</label>{" "}
@@ -291,12 +289,12 @@ export function AgentForm({
       {toolsSupported ? (
         <fieldset>
           <legend>Salt okunur MCP araç izinleri</legend>
-          {toolsQuery.isPending ? <p> Araçlar yükleniyor…</p> : null}
+          {toolsQuery.isPending ? <LoadingState>Araçlar yükleniyor…</LoadingState> : null}
           {toolsQuery.isError ? (
-            <p role="alert"> Araçlar yüklenemedi: {errorText(toolsQuery.error)}</p>
+            <ErrorState>Araçlar yüklenemedi: {errorText(toolsQuery.error)}</ErrorState>
           ) : null}
           {toolsQuery.isSuccess && trustedTools.length === 0 ? (
-            <p> Yönetici tarafından onaylanmış salt okunur araç yok.</p>
+            <EmptyState>Yönetici tarafından onaylanmış salt okunur araç yok.</EmptyState>
           ) : null}
           {trustedTools.map((tool) => (
             <label key={tool.id}>
@@ -345,10 +343,10 @@ export function AgentForm({
       !toolsSupported &&
       agent !== undefined &&
       agent.tool_ids.length > 0 ? (
-        <p role="status">
+        <StatusLine>
           Seçili sağlayıcı MCP araç izinlerini desteklemiyor; kaydettiğinde mevcut izinler
           kaldırılır.
-        </p>
+        </StatusLine>
       ) : null}
       <p>
         <label htmlFor="agent-enabled">
@@ -365,9 +363,9 @@ export function AgentForm({
           Devre dışı bırakma kaydı silmez; geçmiş konuşma ve görev referansları korunur.
         </small>
       </p>
-      {shownError ? <p role="alert">{shownError}</p> : null}
+      {shownError ? <ErrorState>{shownError}</ErrorState> : null}
       {modelBlocked ? (
-        <p role="status">Seçili sağlayıcı için model listesi yüklenmeden kaydedilemez.</p>
+        <StatusLine>Seçili sağlayıcı için model listesi yüklenmeden kaydedilemez.</StatusLine>
       ) : null}
       <p>
         <button type="submit" disabled={submitting || modelBlocked}>

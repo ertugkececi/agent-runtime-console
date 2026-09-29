@@ -1,0 +1,413 @@
+/* The console's design foundation.
+ *
+ * One token set, base element styles and the few shared classes every screen
+ * uses. Screens do not carry their own palette: a color exists here or it does
+ * not, and the token comments record the contrast pair it was chosen for.
+ *
+ * Contrast (WCAG 2.1, normal text needs 4.5:1, UI borders 3:1):
+ *   --color-text on --color-surface               16.2:1
+ *   --color-text-muted on --color-surface          7.2:1
+ *   --color-accent-text on --color-accent          7.9:1
+ *   --color-error-text on --color-error-surface    7.6:1
+ *   --color-focus on --color-surface               7.9:1
+ *   every graph node border on --color-surface    >=5.0:1
+ */
+
+:root {
+  color-scheme: light;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-canvas: #eef1f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f3f6;
+  --color-text: #1c2128;
+  --color-text-muted: #4f5865;
+  --color-border: #c8d0da;
+  --color-border-strong: #8b95a3;
+
+  --color-accent: #174ea6;
+  --color-accent-hover: #0f3a80;
+  --color-accent-text: #ffffff;
+  --color-link: #174ea6;
+  --color-focus: #174ea6;
+
+  --color-error-text: #8f1d22;
+  --color-error-surface: #fbe9ea;
+  --color-error-border: #e5a3a7;
+  --color-info-surface: #eaf1fd;
+  --color-info-border: #b3c8ef;
+
+  /* Graph node kinds: the fill carries the kind, the border is the 3:1 edge. */
+  --graph-agent-surface: #e8efff;
+  --graph-agent-border: #2f57c9;
+  --graph-capability-surface: #e6f6ea;
+  --graph-capability-border: #2e7d43;
+  --graph-run-surface: #f2eaff;
+  --graph-run-border: #6a3fd0;
+  --graph-turn-surface: #fff2d9;
+  --graph-turn-border: #8a5a00;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 8%);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 1em 0 0.5em;
+  line-height: 1.25;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+p {
+  margin: 0.6em 0;
+}
+
+small {
+  color: var(--color-text-muted);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--color-link);
+}
+
+/* One field per line: the label sits above its control, whatever the control
+ * is, so the forms look the same on every screen. */
+label {
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Definition lists read as a term/value table. */
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0.6em 0;
+}
+
+dt {
+  font-weight: 600;
+}
+
+dd {
+  margin: 0;
+}
+
+/* A single visible focus indicator. Programmatic focus on a `tabindex="-1"`
+ * target only shows it when the interaction was a keyboard one, which is
+ * exactly when it helps. */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* React Flow turns the node outline off in its own stylesheet; the nodes are
+ * the graph's keyboard targets, so the ring is restored with more weight. */
+div.react-flow__node.selectable:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-surface-muted);
+}
+
+/* The current choice in a pressed-button group: screen tabs, the selected
+ * agent, the graph view. */
+button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+button[aria-pressed="true"]:hover {
+  background: var(--color-accent-hover);
+}
+
+button:disabled {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+textarea {
+  width: 100%;
+  max-width: 42rem;
+  resize: vertical;
+}
+
+fieldset {
+  margin: 1em 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+legend {
+  padding-inline: var(--space-1);
+  font-weight: 600;
+}
+
+/* Shell ------------------------------------------------------------------ */
+
+.app-shell {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.app-header h1 {
+  margin-bottom: 0;
+}
+
+.app-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+/* The first Tab stop: jumps over the header and the screen navigation. */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -4rem;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-focus);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+  z-index: 10;
+}
+
+.app-centered {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+/* Screens ----------------------------------------------------------------- */
+
+.screen {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4) var(--space-5);
+}
+
+.screen > :first-child {
+  margin-top: 0;
+}
+
+.app-centered .screen {
+  width: min(30rem, 100%);
+}
+
+/* Status messages --------------------------------------------------------- */
+
+.status {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.status--line {
+  padding: 0;
+  color: var(--color-text-muted);
+}
+
+.status--loading {
+  border-color: var(--color-info-border);
+  background: var(--color-info-surface);
+}
+
+.status--empty {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.status--error {
+  border-color: var(--color-error-border);
+  background: var(--color-error-surface);
+  color: var(--color-error-text);
+}
+
+/* Graph ------------------------------------------------------------------- */
+
+.graph-canvas {
+  height: 480px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+/* React Flow's attribution link is #999 at 10px, below AA on the canvas. */
+.graph-canvas .react-flow__attribution a {
+  color: var(--color-text-muted);
+}
+
+.graph-node {
+  width: 100%;
+  height: 100%;
+  padding: 6px 8px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+}
+
+.graph-node[data-kind="agent"] {
+  border-color: var(--graph-agent-border);
+  background: var(--graph-agent-surface);
+}
+
+.graph-node[data-kind="capability"] {
+  border-color: var(--graph-capability-border);
+  background: var(--graph-capability-surface);
+}
+
+.graph-node[data-kind="run"] {
+  border-color: var(--graph-run-border);
+  background: var(--graph-run-surface);
+}
+
+.graph-node[data-kind="turn"] {
+  border-color: var(--graph-turn-border);
+  background: var(--graph-turn-surface);
+}
+
+.graph-node[data-selected="true"] {
+  border-width: 3px;
+  border-color: var(--color-text);
+}
+
+.graph-node__label {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.graph-node__meta {
+  font-size: 11px;
+  line-height: 1.25;
+  color: #3d4550;
+}
+
+.graph-node__status {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.detail-panel {
+  margin-top: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}

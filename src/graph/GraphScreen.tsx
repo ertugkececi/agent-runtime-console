@@ -9,6 +9,7 @@
 import { useState } from "react";
 
 import { useAgentList } from "../agents/useAgents";
+import { errorText } from "../api/errorMessage";
 import { useChatConversation } from "../chat/useChat";
 import { useRoom, useRoomRun, useRoomRuns } from "../rooms/useRooms";
 import { runStatusLabel } from "../runs/run";
@@ -17,6 +18,7 @@ import {
   CONVERSATION_STORAGE_KEY,
   readSavedRooms,
 } from "../storage";
+import { EmptyState, ErrorState, LoadingState } from "../ui/Status";
 import { GraphCanvas } from "./GraphCanvas";
 import { GraphDetail } from "./GraphDetail";
 import {
@@ -41,10 +43,6 @@ import { useGraphRuns } from "./useGraph";
 const MAX_GRAPH_RUNS = 20;
 
 type GraphViewName = "agents" | "handoff" | "room";
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "Bilinmeyen hata.";
-}
 
 export function GraphScreen() {
   const [viewName, setViewName] = useState<GraphViewName>("agents");
@@ -118,8 +116,10 @@ export function GraphScreen() {
   const noAgents = agentsQuery.isSuccess && agents.length === 0;
 
   return (
-    <section aria-labelledby="graph-heading">
-      <h2 id="graph-heading">Graf görünümü</h2>
+    <section className="screen" aria-labelledby="graph-heading">
+      <h2 id="graph-heading" tabIndex={-1}>
+        Graf görünümü
+      </h2>
       <p>
         Ajanları, yetenek eşleşmelerini, devir zincirini ve oda akışını düğüm–kenar olarak gösterir.
         Düğümler <code>agents</code>, <code>agent_capabilities</code>, <code>runs</code> ve{" "}
@@ -148,9 +148,9 @@ export function GraphScreen() {
       </nav>
 
       {viewName === "handoff" && graphRunsQuery.failed > 0 ? (
-        <p role="alert">
+        <ErrorState>
           {graphRunsQuery.failed} çalıştırma yüklenemedi; graf yalnızca yüklenen veriyi gösteriyor.
-        </p>
+        </ErrorState>
       ) : null}
       {viewName === "handoff" && runIds.length > MAX_GRAPH_RUNS ? (
         <p>
@@ -204,50 +204,56 @@ export function GraphScreen() {
         </p>
       ) : null}
 
-      {viewName === "agents" && loadingAgents ? <p role="status">Ajanlar yükleniyor…</p> : null}
+      {viewName === "agents" && loadingAgents ? (
+        <LoadingState>Ajanlar yükleniyor…</LoadingState>
+      ) : null}
       {viewName === "agents" && agentsQuery.isError ? (
-        <p role="alert">Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</p>
+        <ErrorState>Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</ErrorState>
       ) : null}
       {viewName === "agents" && noAgents ? (
-        <p>Graf için önce Ajanlar ekranından bir ajan oluştur.</p>
+        <EmptyState>Graf için önce Ajanlar ekranından bir ajan oluştur.</EmptyState>
       ) : null}
 
       {viewName === "handoff" && conversationId === null ? (
-        <p>Sohbet geçmişi olmadan devir zinciri yok. Sohbet ekranından bir konuşma başlat.</p>
+        <EmptyState>
+          Sohbet geçmişi olmadan devir zinciri yok. Sohbet ekranından bir konuşma başlat.
+        </EmptyState>
       ) : null}
       {viewName === "handoff" && conversationQuery.isError ? (
-        <p role="alert">Sohbet yüklenemedi: {errorText(conversationQuery.error)}</p>
+        <ErrorState>Sohbet yüklenemedi: {errorText(conversationQuery.error)}</ErrorState>
       ) : null}
       {viewName === "handoff" && conversationQuery.isPending ? (
-        <p role="status">Sohbet yükleniyor…</p>
+        <LoadingState>Sohbet yükleniyor…</LoadingState>
       ) : null}
       {viewName === "handoff" && conversationQuery.isSuccess && graphRunsQuery.pending ? (
-        <p role="status">Çalıştırmalar yükleniyor…</p>
+        <LoadingState>Çalıştırmalar yükleniyor…</LoadingState>
       ) : null}
       {viewName === "handoff" &&
       conversationQuery.isSuccess &&
       !graphRunsQuery.pending &&
       handoffs.length === 0 ? (
-        <p>Bu sohbette henüz çalıştırma yok.</p>
+        <EmptyState>Bu sohbette henüz çalıştırma yok.</EmptyState>
       ) : null}
 
       {viewName === "room" && savedRooms.length === 0 ? (
-        <p>Bu tarayıcıda kayıtlı oda yok. Grup odaları ekranından bir oda oluştur.</p>
+        <EmptyState>
+          Bu tarayıcıda kayıtlı oda yok. Grup odaları ekranından bir oda oluştur.
+        </EmptyState>
       ) : null}
       {viewName === "room" && roomId !== null && roomQuery.isPending ? (
-        <p role="status">Oda yükleniyor…</p>
+        <LoadingState>Oda yükleniyor…</LoadingState>
       ) : null}
       {viewName === "room" && roomQuery.isError ? (
-        <p role="alert">Oda yüklenemedi: {errorText(roomQuery.error)}</p>
+        <ErrorState>Oda yüklenemedi: {errorText(roomQuery.error)}</ErrorState>
       ) : null}
       {viewName === "room" && roomRunsQuery.isError ? (
-        <p role="alert">Oda çalıştırmaları yüklenemedi: {errorText(roomRunsQuery.error)}</p>
+        <ErrorState>Oda çalıştırmaları yüklenemedi: {errorText(roomRunsQuery.error)}</ErrorState>
       ) : null}
       {viewName === "room" && room !== null && roomRuns.length === 0 ? (
-        <p>Bu odada henüz görev yok; katılımcı sırası gösteriliyor.</p>
+        <EmptyState>Bu odada henüz görev yok; katılımcı sırası gösteriliyor.</EmptyState>
       ) : null}
       {viewName === "room" && room !== null && roomRuns.length > 0 && flowRun === null ? (
-        <p role="status">Çalıştırma yükleniyor…</p>
+        <LoadingState>Çalıştırma yükleniyor…</LoadingState>
       ) : null}
 
       {activeView.nodes.length > 0 ? (

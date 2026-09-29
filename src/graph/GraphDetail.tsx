@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import type { Agent } from "../agents/agent";
 import type { Room, RoomRun } from "../rooms/room";
 import { eventDetails, eventLabel, formatTime, runStatusLabel } from "../runs/run";
+import { EmptyState, ErrorState } from "../ui/Status";
 import {
   agentRunHistory,
   capabilityHandoffStats,
@@ -42,10 +43,10 @@ export function GraphDetail({ node, agents, knownRuns, room, roomRun }: GraphDet
     return (
       <section aria-labelledby="graph-detail-heading">
         <h3 id="graph-detail-heading">Seçili düğüm</h3>
-        <p>
-          Graf üzerinde Tab ile düğümler arasında gezinip Enter veya boşlukla bir düğüm seç; ayrıntılar
-          burada görünür.
-        </p>
+        <EmptyState>
+          Graf üzerinde Tab ile düğümler arasında gezinip Enter veya boşlukla bir düğüm seç;
+          ayrıntılar burada görünür.
+        </EmptyState>
       </section>
     );
   }
@@ -55,7 +56,7 @@ export function GraphDetail({ node, agents, knownRuns, room, roomRun }: GraphDet
       ref={panelRef}
       tabIndex={-1}
       aria-labelledby="graph-detail-heading"
-      style={{ border: "1px solid #bbb", padding: "0 12px 12px", marginTop: 12 }}
+      className="detail-panel"
     >
       <h3 id="graph-detail-heading">
         Seçili düğüm: {node.label}
@@ -89,9 +90,10 @@ function AgentDetail({
   return (
     <>
       {agent === null ? (
-        <p>
-          Bu ajan için <code>GET /agents</code> kaydı yok; ad, çalıştırma anlık görüntüsünden geliyor.
-        </p>
+        <EmptyState>
+          Bu ajan için <code>GET /agents</code> kaydı yok; ad, çalıştırma anlık görüntüsünden
+          geliyor.
+        </EmptyState>
       ) : (
         <>
           <dl>
@@ -114,7 +116,7 @@ function AgentDetail({
       )}
       <h4>Çalıştırma geçmişi</h4>
       {history.length === 0 ? (
-        <p>Yüklenen çalıştırmalarda bu ajan geçmiyor.</p>
+        <EmptyState>Yüklenen çalıştırmalarda bu ajan geçmiyor.</EmptyState>
       ) : (
         <ul>
           {history.map((entry) => (
@@ -167,9 +169,9 @@ function RunDetail({ node, knownRuns }: { node: GraphNode; knownRuns: KnownRun[]
 
   if (run === null) {
     return (
-      <p>
+      <ErrorState>
         Bu çalıştırmanın kaydı yüklenemedi. Kimlik: <code>{node.runId}</code>.
-      </p>
+      </ErrorState>
     );
   }
 
@@ -193,7 +195,7 @@ function RunDetail({ node, knownRuns }: { node: GraphNode; knownRuns: KnownRun[]
       </p>
       <h4>Olaylar</h4>
       {run.events.length === 0 ? (
-        <p>Bu çalıştırmada olay kaydı yok.</p>
+        <EmptyState>Bu çalıştırmada olay kaydı yok.</EmptyState>
       ) : (
         <ol>
           {run.events.map((event) => {
@@ -233,7 +235,7 @@ function TurnDetail({
     <>
       {room !== null ? <p>Oda: {room.name}</p> : null}
       {turn === null ? (
-        <p>Bu turun kaydı yüklenemedi.</p>
+        <ErrorState>Bu turun kaydı yüklenemedi.</ErrorState>
       ) : (
         <>
           <p>
@@ -246,7 +248,7 @@ function TurnDetail({
       )}
       <h4>Tur olayları</h4>
       {turnEvents.length === 0 ? (
-        <p>Bu tur için olay kaydı yok.</p>
+        <EmptyState>Bu tur için olay kaydı yok.</EmptyState>
       ) : (
         <ol>
           {turnEvents.map((event) => (

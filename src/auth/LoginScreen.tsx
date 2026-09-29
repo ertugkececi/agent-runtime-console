@@ -1,12 +1,20 @@
+/**
+ * The unauthorized state: no session (or one that ended). The sign-in link is
+ * the only action; the platform redirects back to the console after the
+ * session is established.
+ */
 export function LoginScreen() {
   return (
-    <main>
-      <h1>Sign in required</h1>
-      <p>
-        Your session has ended or has not started yet. Sign in again to
-        continue.
-      </p>
-      <a href="/auth/login">Sign in</a>
+    <main className="app-centered">
+      <section className="screen" aria-labelledby="login-heading">
+        <h1 id="login-heading">Oturum gerekli</h1>
+        <p>
+          Oturumun sona erdi ya da henüz başlamadı. Devam etmek için yeniden giriş yap.
+        </p>
+        <p>
+          <a href="/auth/login">Giriş yap</a>
+        </p>
+      </section>
     </main>
   );
 }
