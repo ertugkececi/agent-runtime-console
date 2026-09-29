@@ -14,6 +14,7 @@ import {
   readRecord,
   readString,
 } from "../api/payload";
+import { parseRunEvent, type RunEvent } from "../runs/run";
 
 /** One participant of a room, in speaking order. */
 export interface RoomParticipant {
@@ -42,6 +43,7 @@ export interface RoomRunTurn {
   agent_name: string;
   phase: string;
   status: string;
+  is_moderator: boolean;
   content: string | null;
 }
 
@@ -52,6 +54,7 @@ export interface RoomRun {
   final_answer: string | null;
   error_code: string | null;
   turns: RoomRunTurn[];
+  events: RunEvent[];
 }
 
 const MODERATOR_PHASE = "moderator_summary";
@@ -117,6 +120,7 @@ function parseRoomRunTurn(payload: unknown): RoomRunTurn {
     agent_name: readString(payload, "agent_name"),
     phase: readString(payload, "phase"),
     status: readString(payload, "status"),
+    is_moderator: readBoolean(payload, "is_moderator"),
     content: readOptionalString(payload, "content"),
   };
 }
@@ -129,6 +133,10 @@ export function parseRoomRun(payload: unknown): RoomRun {
   if (!Array.isArray(turns)) {
     throw new Error('Yanıttaki "turns" alanı liste değil.');
   }
+  const events = payload.events;
+  if (!Array.isArray(events)) {
+    throw new Error('Yanıttaki "events" alanı liste değil.');
+  }
   return {
     id: readString(payload, "id"),
     status: readString(payload, "status"),
@@ -136,6 +144,7 @@ export function parseRoomRun(payload: unknown): RoomRun {
     final_answer: readOptionalString(payload, "final_answer"),
     error_code: readOptionalString(payload, "error_code"),
     turns: turns.map(parseRoomRunTurn).sort((left, right) => left.position - right.position),
+    events: events.map(parseRunEvent),
   };
 }
 

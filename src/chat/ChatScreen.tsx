@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useAgentList } from "../agents/useAgents";
 import { isActiveStatus, isTerminalStatus, runStatusLabel } from "../runs/run";
+import { CONVERSATION_STORAGE_KEY } from "../storage";
 import { newestRunId, type ChatMessage } from "./chat";
 import { RunTimeline } from "./RunTimeline";
 import {
@@ -14,9 +15,9 @@ import {
 } from "./useChat";
 
 // The last chat is restored on refresh, exactly like the single-file interface
-// did. The conversation id is what makes the history load; the agent id keeps
-// the picker where the user left it.
-const CONVERSATION_STORAGE_KEY = "agentRuntimeConsoleConversationId";
+// did. The conversation id (shared with the graph screen, see src/storage.ts)
+// is what makes the history load; the agent id keeps the picker where the user
+// left it.
 const AGENT_STORAGE_KEY = "agentRuntimeConsoleAgentId";
 
 function errorText(error: unknown): string {
