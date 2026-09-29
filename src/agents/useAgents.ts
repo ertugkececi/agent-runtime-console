@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ClientPathsWithMethod } from "openapi-fetch";
 
 import { api } from "../api/client";
 import { apiErrorMessage } from "../api/errorMessage";
@@ -6,13 +7,16 @@ import {
   agentChanges,
   parseAgent,
   parseAgentList,
-  parseProviderIds,
+  parseModelChoices,
+  parseToolChoices,
   type Agent,
   type AgentDraft,
 } from "./agent";
 
 const AGENTS_QUERY_KEY = ["agents"] as const;
 const AGENT_CONFIG_QUERY_KEY = ["agent-config", "catalog"] as const;
+const MODEL_CATALOG_QUERY_KEY = ["agent-config", "models"] as const;
+const TOOL_CATALOG_QUERY_KEY = ["mcp", "tools"] as const;
 
 /**
  * All registered agents. A non-empty capability switches to the backend's
@@ -35,8 +39,13 @@ export function useAgentList(capability: string) {
   });
 }
 
-/** Provider IDs the platform is configured with; the API rejects any other. */
-export function useProviderIds() {
+/**
+ * Configured providers with the capabilities their manifests declare. The
+ * response is typed in the contract, so no narrowing is needed here; the
+ * screen reads `supports_tool_ids` and `model_catalog_url` instead of keeping
+ * its own provider list.
+ */
+export function useProviderCatalog() {
   return useQuery({
     queryKey: AGENT_CONFIG_QUERY_KEY,
     queryFn: async () => {
@@ -44,7 +53,47 @@ export function useProviderIds() {
       if (error) {
         throw new Error(apiErrorMessage(error, response.status));
       }
-      return parseProviderIds(data);
+      return data.providers;
+    },
+  });
+}
+
+/**
+ * The model catalog the provider's `model_catalog_url` points at, and the only
+ * list of selectable models and reasoning efforts. The path comes from the
+ * API, so a provider cannot be added to the platform without its catalog
+ * showing up here.
+ */
+export function useModelCatalog(url: string | null) {
+  return useQuery({
+    queryKey: [...MODEL_CATALOG_QUERY_KEY, url],
+    enabled: url !== null,
+    queryFn: async () => {
+      // `url` is a contract path reported by GET /agent-config/catalog; the
+      // payload is narrowed in agent.ts like every other untyped read.
+      const { data, error, response } = await api.GET(url as ClientPathsWithMethod<typeof api, "get">, {});
+      if (error) {
+        throw new Error(apiErrorMessage(error, response.status));
+      }
+      return parseModelChoices(data);
+    },
+  });
+}
+
+/**
+ * The administrator-approved MCP tool catalog (`GET /mcp/tools`). The backend
+ * refuses a grant that is not listed here, so the picker offers nothing else.
+ */
+export function useToolCatalog(enabled: boolean) {
+  return useQuery({
+    queryKey: TOOL_CATALOG_QUERY_KEY,
+    enabled,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET("/mcp/tools");
+      if (error) {
+        throw new Error(apiErrorMessage(error, response.status));
+      }
+      return parseToolChoices(data);
     },
   });
 }

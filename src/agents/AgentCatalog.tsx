@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { AgentForm } from "./AgentForm";
 import { normalizeCapability, type AgentDraft } from "./agent";
-import { useAgentList, useCreateAgent, useProviderIds, useUpdateAgent } from "./useAgents";
+import { useAgentList, useCreateAgent, useProviderCatalog, useUpdateAgent } from "./useAgents";
 
 const FILTER_DEBOUNCE_MS = 300;
 
@@ -26,7 +26,7 @@ export function AgentCatalog() {
   const capability = useDebouncedValue(normalizeCapability(filterInput), FILTER_DEBOUNCE_MS);
 
   const agentsQuery = useAgentList(capability);
-  const providersQuery = useProviderIds();
+  const providersQuery = useProviderCatalog();
   const createAgent = useCreateAgent();
   const updateAgent = useUpdateAgent();
 

@@ -1,13 +1,26 @@
 // View model for the agent catalog.
 //
-// The platform contract types agent writes (`AgentCreate` / `AgentUpdate`) but
-// not agent reads: GET /agents answers plain objects. This module narrows that
-// payload once, at the boundary with the generated client, so the screen works
-// with checked values instead of a hand-written copy of the read schema.
+// The platform contract types agent writes (`AgentCreate` / `AgentUpdate`) and
+// the agent-config catalog, but not agent or catalog reads: GET /agents,
+// GET /codex/models, GET /opencode/models and GET /mcp/tools answer plain
+// objects. This module narrows those payloads once, at the boundary with the
+// generated client, so the screen works with checked values instead of a
+// hand-written copy of the read schemas.
 
 import type { components } from "../api/schema";
 
 export type AgentUpdate = components["schemas"]["AgentUpdate"];
+
+/** One configured provider and the capabilities its manifest declares. */
+export type AgentConfigProvider = components["schemas"]["AgentConfigProvider"];
+
+/**
+ * The reasoning efforts the agent API accepts (`AgentCreate` /
+ * `AgentUpdate`), as declared by the contract.
+ */
+export type ModelEffort = NonNullable<
+  components["schemas"]["AgentUpdate"]["model_reasoning_effort"]
+>;
 
 export interface Agent {
   id: string;
@@ -19,6 +32,7 @@ export interface Agent {
   model_reasoning_effort: string | null;
   enabled: boolean;
   capabilities: string[];
+  tool_ids: string[];
   version: number;
 }
 
@@ -29,8 +43,30 @@ export interface AgentDraft {
   instructions: string;
   model_provider: string;
   model_name: string;
+  model_reasoning_effort: ModelEffort | null;
   capabilities: string[];
+  tool_ids: string[];
   enabled: boolean;
+}
+
+/**
+ * One selectable model from a provider's catalog (`GET /codex/models`,
+ * `GET /opencode/models`). `efforts` are the only reasoning efforts the
+ * provider supports for that model; an empty list means the model has none.
+ */
+export interface ModelChoice {
+  id: string;
+  label: string;
+  is_default: boolean;
+  default_effort: string;
+  efforts: string[];
+}
+
+/** One administrator-configured MCP tool from `GET /mcp/tools`. */
+export interface ToolChoice {
+  id: string;
+  description: string;
+  trusted_read_only: boolean;
 }
 
 /**
@@ -61,6 +97,10 @@ export function parseCapabilities(value: string): string[] {
 /**
  * PATCH body holding only the fields the form changed, or null when the draft
  * equals the agent: an unchanged save must not bump the agent version.
+ *
+ * `model_reasoning_effort` is sent only when it has a value: PATCH drops
+ * explicit nulls (`exclude_none`), so the API can set an effort but never clear
+ * one, and a null here would not change the stored agent.
  */
 export function agentChanges(agent: Agent, draft: AgentDraft): AgentUpdate | null {
   const changes: AgentUpdate = {};
@@ -69,14 +109,60 @@ export function agentChanges(agent: Agent, draft: AgentDraft): AgentUpdate | nul
   if (draft.instructions !== agent.instructions) changes.instructions = draft.instructions;
   if (draft.model_provider !== agent.model_provider) changes.model_provider = draft.model_provider;
   if (draft.model_name !== agent.model_name) changes.model_name = draft.model_name;
-  if (!sameCapabilities(draft.capabilities, agent.capabilities)) {
+  if (
+    draft.model_reasoning_effort !== null &&
+    draft.model_reasoning_effort !== agent.model_reasoning_effort
+  ) {
+    changes.model_reasoning_effort = draft.model_reasoning_effort;
+  }
+  if (!sameStrings(draft.capabilities, agent.capabilities)) {
     changes.capabilities = draft.capabilities;
   }
+  if (!sameStrings(draft.tool_ids, agent.tool_ids)) changes.tool_ids = draft.tool_ids;
   if (draft.enabled !== agent.enabled) changes.enabled = draft.enabled;
   return Object.keys(changes).length > 0 ? changes : null;
 }
 
-function sameCapabilities(left: string[], right: string[]): boolean {
+/**
+ * The effort to select after the model changed: the current value while the
+ * new model still supports it, otherwise the model's own default, then its
+ * first supported value. A model without efforts keeps the stored value,
+ * because the API cannot clear an effort.
+ */
+export function nextEffort(
+  model: ModelChoice | undefined,
+  current: string,
+  stored: string | null,
+): string {
+  if (!model) return current;
+  if (model.efforts.length === 0) return stored ?? "";
+  if (model.efforts.includes(current)) return current;
+  if (model.efforts.includes(model.default_effort)) return model.default_effort;
+  return model.efforts[0];
+}
+
+/**
+ * The model to select while a provider's catalog is loaded. A model the
+ * catalog does not list is kept only while it is the agent's own stored model;
+ * otherwise the form moves to the model with the same id, then the catalog
+ * default, then its first entry.
+ */
+export function resolveModelName(
+  choices: ModelChoice[],
+  current: string,
+  storedModel: string | null,
+): string {
+  if (choices.length === 0) return current;
+  if (choices.some((choice) => choice.id === current)) return current;
+  if (storedModel !== null && current === storedModel) return current;
+  return (
+    choices.find((choice) => choice.id === storedModel)?.id ??
+    choices.find((choice) => choice.is_default)?.id ??
+    choices[0].id
+  );
+}
+
+export function sameStrings(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
@@ -87,7 +173,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function readString(source: Record<string, unknown>, key: string): string {
   const value = source[key];
   if (typeof value !== "string") {
-    throw new Error(`Ajan yanıtındaki "${key}" alanı metin değil.`);
+    throw new Error(`Yanıttaki "${key}" alanı metin değil.`);
   }
   return value;
 }
@@ -98,7 +184,7 @@ function readOptionalString(source: Record<string, unknown>, key: string): strin
     return null;
   }
   if (typeof value !== "string") {
-    throw new Error(`Ajan yanıtındaki "${key}" alanı metin değil.`);
+    throw new Error(`Yanıttaki "${key}" alanı metin değil.`);
   }
   return value;
 }
@@ -106,7 +192,7 @@ function readOptionalString(source: Record<string, unknown>, key: string): strin
 function readBoolean(source: Record<string, unknown>, key: string): boolean {
   const value = source[key];
   if (typeof value !== "boolean") {
-    throw new Error(`Ajan yanıtındaki "${key}" alanı doğru/yanlış değil.`);
+    throw new Error(`Yanıttaki "${key}" alanı doğru/yanlış değil.`);
   }
   return value;
 }
@@ -114,7 +200,7 @@ function readBoolean(source: Record<string, unknown>, key: string): boolean {
 function readNumber(source: Record<string, unknown>, key: string): number {
   const value = source[key];
   if (typeof value !== "number") {
-    throw new Error(`Ajan yanıtındaki "${key}" alanı sayı değil.`);
+    throw new Error(`Yanıttaki "${key}" alanı sayı değil.`);
   }
   return value;
 }
@@ -122,7 +208,7 @@ function readNumber(source: Record<string, unknown>, key: string): number {
 function readStringArray(source: Record<string, unknown>, key: string): string[] {
   const value = source[key];
   if (!Array.isArray(value) || !value.every((item): item is string => typeof item === "string")) {
-    throw new Error(`Ajan yanıtındaki "${key}" alanı metin listesi değil.`);
+    throw new Error(`Yanıttaki "${key}" alanı metin listesi değil.`);
   }
   return value;
 }
@@ -141,6 +227,7 @@ export function parseAgent(payload: unknown): Agent {
     model_reasoning_effort: readOptionalString(payload, "model_reasoning_effort"),
     enabled: readBoolean(payload, "enabled"),
     capabilities: readStringArray(payload, "capabilities"),
+    tool_ids: readStringArray(payload, "tool_ids"),
     version: readNumber(payload, "version"),
   };
 }
@@ -152,14 +239,41 @@ export function parseAgentList(payload: unknown): Agent[] {
   return payload.map(parseAgent);
 }
 
-export function parseProviderIds(payload: unknown): string[] {
-  if (!isRecord(payload) || !Array.isArray(payload.providers)) {
-    throw new Error("Sağlayıcı kataloğu beklenen biçimde değil.");
+/**
+ * A provider's model catalog. `id` and `efforts` are the only model names and
+ * reasoning efforts the provider supports, so the form offers exactly these.
+ */
+export function parseModelChoices(payload: unknown): ModelChoice[] {
+  if (!Array.isArray(payload)) {
+    throw new Error("Model kataloğu bir dizi değil.");
   }
-  return payload.providers.map((provider) => {
-    if (!isRecord(provider)) {
-      throw new Error("Sağlayıcı kataloğu beklenen biçimde değil.");
+  return payload.map((entry) => {
+    if (!isRecord(entry)) {
+      throw new Error("Model kataloğu beklenen biçimde değil.");
     }
-    return readString(provider, "id");
+    return {
+      id: readString(entry, "id"),
+      label: readString(entry, "label"),
+      is_default: readBoolean(entry, "is_default"),
+      default_effort: readString(entry, "default_effort"),
+      efforts: readStringArray(entry, "efforts"),
+    };
+  });
+}
+
+/** The tool catalog; only entries the administrator approved as read-only. */
+export function parseToolChoices(payload: unknown): ToolChoice[] {
+  if (!Array.isArray(payload)) {
+    throw new Error("Araç kataloğu bir dizi değil.");
+  }
+  return payload.map((entry) => {
+    if (!isRecord(entry)) {
+      throw new Error("Araç kataloğu beklenen biçimde değil.");
+    }
+    return {
+      id: readString(entry, "id"),
+      description: readString(entry, "description"),
+      trusted_read_only: readBoolean(entry, "trusted_read_only"),
+    };
   });
 }
