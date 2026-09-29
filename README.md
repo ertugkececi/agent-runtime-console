@@ -79,6 +79,30 @@ its own:
 This keeps the API the only gate: the console offers no value the platform
 would answer with `422`.
 
+## Chat and run timeline
+
+The chat screen talks to one enabled agent through the human-chat endpoints.
+Sending is asynchronous: `POST /chat/conversations/{id}/messages/async` answers
+`202` with the run id, and the console follows that run with
+`GET /runs/{run_id}` until the platform reports `completed` or `failed`. The
+status line shows `Sırada`/`Çalışıyor`/`Tamamlandı`/`Başarısız`, the queue
+attempt count while a job is queued, and the `error_code` of a failed run. A
+second message waits for the running one; the backend has one worker, and the
+console does not pretend otherwise.
+
+The conversation id lives in `localStorage`, so a refresh reloads the history
+with `GET /conversations/{id}` and resumes the newest user message's run: a run
+still in `queued`/`running` keeps being polled, and its state is visible without
+reloading. `Yeni sohbet` starts a new conversation with the selected agent; a
+stored conversation that no longer exists, or that belonged to an agent that
+has since been disabled, is not shown as if it were the current chat.
+
+The timeline is built from the run's `events`. It renders a label per event type
+and only a fixed set of payload fields — identifiers, statuses, error codes,
+counts and model names. Message content and tool arguments are never rendered:
+an `mcp_tool_call` shows the server, tool, status and phase, so the call is
+visible but what it was called with is not.
+
 ## Checks
 
 ```sh

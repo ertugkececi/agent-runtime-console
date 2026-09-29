@@ -7,6 +7,14 @@
 // generated client, so the screen works with checked values instead of a
 // hand-written copy of the read schemas.
 
+import {
+  isRecord,
+  readBoolean,
+  readNumber,
+  readOptionalString,
+  readString,
+  readStringArray,
+} from "../api/payload";
 import type { components } from "../api/schema";
 
 export type AgentUpdate = components["schemas"]["AgentUpdate"];
@@ -164,53 +172,6 @@ export function resolveModelName(
 
 export function sameStrings(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readString(source: Record<string, unknown>, key: string): string {
-  const value = source[key];
-  if (typeof value !== "string") {
-    throw new Error(`Yanıttaki "${key}" alanı metin değil.`);
-  }
-  return value;
-}
-
-function readOptionalString(source: Record<string, unknown>, key: string): string | null {
-  const value = source[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value !== "string") {
-    throw new Error(`Yanıttaki "${key}" alanı metin değil.`);
-  }
-  return value;
-}
-
-function readBoolean(source: Record<string, unknown>, key: string): boolean {
-  const value = source[key];
-  if (typeof value !== "boolean") {
-    throw new Error(`Yanıttaki "${key}" alanı doğru/yanlış değil.`);
-  }
-  return value;
-}
-
-function readNumber(source: Record<string, unknown>, key: string): number {
-  const value = source[key];
-  if (typeof value !== "number") {
-    throw new Error(`Yanıttaki "${key}" alanı sayı değil.`);
-  }
-  return value;
-}
-
-function readStringArray(source: Record<string, unknown>, key: string): string[] {
-  const value = source[key];
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === "string")) {
-    throw new Error(`Yanıttaki "${key}" alanı metin listesi değil.`);
-  }
-  return value;
 }
 
 export function parseAgent(payload: unknown): Agent {
