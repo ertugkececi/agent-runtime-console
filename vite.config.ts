@@ -12,7 +12,6 @@ const apiPaths = [
   "/agents",
   "/auth",
   "/chat",
-  "/codex",
   "/conversations",
   "/health",
   "/mcp",

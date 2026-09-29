@@ -79,6 +79,21 @@ its own:
 This keeps the API the only gate: the console offers no value the platform
 would answer with `422`.
 
+## Provider connections
+
+The Sağlayıcı screen connects one model-provider account — for example a
+ChatGPT/Plus subscription — through `GET /opencode/integrations` and
+`/opencode/connections…`. It lists only integrations that offer an OAuth
+method, prefers the headless method (the browser method needs the human's own
+browser to reach a callback port on the server machine), starts one attempt
+with `POST /opencode/connections`, and follows
+`GET /opencode/connections/{id}` until the platform reports `complete` or
+`failed`. A `code`-mode attempt gets an input for the code the provider showed
+the human, sent to `POST …/{id}/code`; `İptal` releases the attempt with
+`DELETE`. The screen never renders a token: the credential is stored
+server-side in the OpenCode data root, and only the sign-in details the
+platform returns are shown.
+
 ## Chat and run timeline
 
 The chat screen talks to one enabled agent through the human-chat endpoints.

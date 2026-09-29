@@ -131,23 +131,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/codex/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Codex Models */
-        get: operations["codex_models_codex_models_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/conversations": {
         parameters: {
             query?: never;
@@ -242,6 +225,84 @@ export interface paths {
         };
         /** List Mcp Tools */
         get: operations["list_mcp_tools_mcp_tools_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opencode/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Opencode Connection
+         * @description Start one provider sign-in and return the details the human needs.
+         *
+         *     The attempt is owned by this server process; a deployment with several
+         *     API workers must route its follow-up calls back to the same worker.
+         */
+        post: operations["start_opencode_connection_opencode_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opencode/connections/{attempt_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Opencode Connection */
+        get: operations["get_opencode_connection_opencode_connections__attempt_id__get"];
+        put?: never;
+        post?: never;
+        /** Cancel Opencode Connection */
+        delete: operations["cancel_opencode_connection_opencode_connections__attempt_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opencode/connections/{attempt_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Opencode Connection Code */
+        post: operations["submit_opencode_connection_code_opencode_connections__attempt_id__code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opencode/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Opencode Integrations
+         * @description Expose the provider integrations and sign-in methods, never a credential.
+         */
+        get: operations["opencode_integrations_opencode_integrations_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -383,13 +444,15 @@ export interface components {
             model_name: string;
             /**
              * Model Provider
-             * @default codex
+             * @default opencode
              */
             model_provider: string;
             /** Model Reasoning Effort */
             model_reasoning_effort?: ("low" | "medium" | "high" | "xhigh" | "max" | "ultra") | null;
             /** Name */
             name: string;
+            /** Published */
+            published?: boolean | null;
             /** Tool Ids */
             tool_ids?: string[];
         };
@@ -411,6 +474,8 @@ export interface components {
             model_reasoning_effort?: ("low" | "medium" | "high" | "xhigh" | "max" | "ultra") | null;
             /** Name */
             name?: string | null;
+            /** Published */
+            published?: boolean | null;
             /** Tool Ids */
             tool_ids?: string[] | null;
         };
@@ -444,6 +509,26 @@ export interface components {
             recipient_capability?: string | null;
             /** Sender Agent Id */
             sender_agent_id: string;
+        };
+        /**
+         * OpenCodeConnectionCode
+         * @description The code the provider showed the human for a ``code``-mode sign-in.
+         */
+        OpenCodeConnectionCode: {
+            /** Code */
+            code: string;
+        };
+        /**
+         * OpenCodeConnectionCreate
+         * @description Start one provider sign-in; the method is chosen when it is omitted.
+         */
+        OpenCodeConnectionCreate: {
+            /** Integration */
+            integration: string;
+            /** Label */
+            label?: string | null;
+            /** Method */
+            method?: string | null;
         };
         /** RoomCreate */
         RoomCreate: {
@@ -737,28 +822,6 @@ export interface operations {
             };
         };
     };
-    codex_models_codex_models_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
     create_conversation_conversations_post: {
         parameters: {
             query?: never;
@@ -924,6 +987,162 @@ export interface operations {
         };
     };
     list_mcp_tools_mcp_tools_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    start_opencode_connection_opencode_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenCodeConnectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_opencode_connection_opencode_connections__attempt_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_opencode_connection_opencode_connections__attempt_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_opencode_connection_code_opencode_connections__attempt_id__code_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenCodeConnectionCode"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opencode_integrations_opencode_integrations_get: {
         parameters: {
             query?: never;
             header?: never;
