@@ -126,6 +126,36 @@ this list. Opening a room loads `GET /rooms/{id}` and `GET /rooms/{id}/runs`,
 and a refresh resumes the newest run still in `queued`/`running` instead of
 showing it as finished.
 
+## Graph views
+
+The graph screen renders the platform's graph nature with `@xyflow/react` and
+an automatic `elkjs` layered layout. There is nothing to enter by hand: every
+node and edge is derived from an API read, and dragging is off because the
+layout is computed.
+
+- **Agent–capability** (`GET /agents`): one node per registered agent and one
+  per capability any agent declares, with membership edges from the agents'
+  `agent_capabilities` records. A disabled agent says so on its node.
+- **Handoff chain** (`GET /runs/{run_id}`): the stored conversation's runs.
+  Each run is a node, the agent it targeted is a node, and every delegated task
+  is an edge labelled with the capability it asked for; repeated handoffs
+  between the same pair collapse into one edge carrying a count. The run detail
+  prints the run's `run_events` through the same fixed safe-key list the chat
+  timeline uses, so a rejection is visible with its reason.
+- **Room flow** (`GET /rooms/{id}`, `GET /rooms/{id}/runs`): the selected run's
+  turns in speaking order, the moderator's participant turn and summary marked,
+  with the run's events on the turn detail. A room without a run shows its
+  participant order instead.
+
+The API has no "list runs" endpoint, so the handoff view reads the runs the
+stored conversation records, most recent 20 at a time, and says when it
+truncated. Selecting a node opens a detail panel — agent fields and the runs
+the agent took part in, a capability's holders and handoff event counts, or a
+run's/turn's events — and moves focus there. Nodes are focusable: Tab moves
+between them, Enter or Space selects, every node carries a readable
+`aria-label`, and the canvas is followed by a text summary of its nodes and
+edges.
+
 ## Checks
 
 ```sh

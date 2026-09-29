@@ -3,6 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useAgentList } from "../agents/useAgents";
 import { isActiveStatus, isTerminalStatus, runStatusLabel } from "../runs/run";
+import {
+  ACTIVE_ROOM_STORAGE_KEY,
+  readSavedRooms,
+  writeSavedRooms,
+  type SavedRoom,
+} from "../storage";
 import { RoomRunView } from "./RoomRunView";
 import {
   ROOM_RUNS_QUERY_KEY,
@@ -13,45 +19,8 @@ import {
   useRoomRuns,
 } from "./useRooms";
 
-// The API has no "list rooms" endpoint, so the browser keeps the ids it
-// created or opened in local storage for quick selection. The room records
-// themselves live in the server database; another browser or device does not
-// see this list.
-const SAVED_ROOMS_STORAGE_KEY = "agentRuntimeConsoleRooms";
-const ACTIVE_ROOM_STORAGE_KEY = "agentRuntimeConsoleRoomId";
-
 const MIN_PARTICIPANTS = 2;
 const MAX_PARTICIPANTS = 5;
-
-interface SavedRoom {
-  id: string;
-  name: string;
-}
-
-function readSavedRooms(): SavedRoom[] {
-  try {
-    const saved: unknown = JSON.parse(
-      window.localStorage.getItem(SAVED_ROOMS_STORAGE_KEY) ?? "[]",
-    );
-    if (Array.isArray(saved)) {
-      return saved.filter(
-        (item): item is SavedRoom =>
-          typeof item === "object" &&
-          item !== null &&
-          typeof (item as SavedRoom).id === "string" &&
-          typeof (item as SavedRoom).name === "string",
-      );
-    }
-  } catch {
-    // A corrupt entry is treated as an empty list; rooms stay reachable
-    // through ids this browser records from now on.
-  }
-  return [];
-}
-
-function writeSavedRooms(rooms: SavedRoom[]): void {
-  window.localStorage.setItem(SAVED_ROOMS_STORAGE_KEY, JSON.stringify(rooms));
-}
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : "Bilinmeyen hata.";

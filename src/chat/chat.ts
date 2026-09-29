@@ -6,7 +6,8 @@
 // at the boundary with the generated client, like src/agents/agent.ts does for
 // the agent catalog, and it holds only the fields the screen reads.
 
-import { isRecord, readNumber, readOptionalString, readRecord, readString, readStringArray } from "../api/payload";
+import { isRecord, readNumber, readOptionalString, readString, readStringArray } from "../api/payload";
+import { parseRunEvent, type RunEvent } from "../runs/run";
 
 export interface ChatMessage {
   id: string;
@@ -21,13 +22,6 @@ export interface ChatConversation {
   id: string;
   agent_ids: string[];
   messages: ChatMessage[];
-}
-
-export interface RunEvent {
-  sequence: number;
-  type: string;
-  payload: Record<string, unknown>;
-  created_at: string;
 }
 
 /** The queue job of an asynchronous run, when one exists. */
@@ -63,75 +57,6 @@ export function newestRunId(messages: ChatMessage[]): string | null {
   return null;
 }
 
-/**
- * The facts the timeline prints for an event. Only identifiers, statuses,
- * codes, counts and model names are ever read from a payload: message content
- * and tool arguments are not in this list, so no event can put them on screen.
- * The `mcp_tool_call` event carries `server`, `tool`, `status` and `phase` —
- * that the call happened, never what it was called with.
- */
-const SAFE_EVENT_DETAIL_KEYS = [
-  "server",
-  "tool",
-  "status",
-  "phase",
-  "error_code",
-  "attempt",
-  "capability",
-  "provider",
-  "model",
-  "output_type",
-  "reason",
-  "disabled_match_count",
-  "candidate_count",
-  "remote_status",
-] as const;
-
-const EVENT_LABELS: Record<string, string> = {
-  run_queued: "Çalıştırma kuyruğa alındı",
-  run_started: "Çalıştırma başladı",
-  user_message_received: "Kullanıcı mesajı alındı",
-  mcp_tool_permissions_checked: "Araç izinleri denetlendi",
-  model_call_started: "Model çağrısı başladı",
-  model_call_completed: "Model çağrısı tamamlandı",
-  mcp_tool_call: "Araç çağrısı",
-  handoff_requested: "Alt görev devri istendi",
-  handoff_rejected: "Alt görev devri reddedildi",
-  handoff_target_resolved: "Devir hedefi belirlendi",
-  handoff_result_reused: "Devir sonucu yeniden kullanıldı",
-  handoff_result_returned: "Devir sonucu döndü",
-  delegated_task_started: "Alt görev başladı",
-  delegated_task_resumed: "Alt görev sürdürüldü",
-  delegated_task_completed: "Alt görev tamamlandı",
-  delegated_task_failed: "Alt görev başarısız",
-  a2a_remote_task_created: "Uzak görev oluşturuldu",
-  a2a_remote_task_status: "Uzak görev durumu alındı",
-  agent_response_saved: "Ajan yanıtı kaydedildi",
-  run_completed: "Çalıştırma tamamlandı",
-  run_failed: "Çalıştırma başarısız",
-  retry_scheduled: "Yeniden deneme planlandı",
-};
-
-export function eventLabel(type: string): string {
-  return EVENT_LABELS[type] ?? type;
-}
-
-export function eventDetails(event: RunEvent): string[] {
-  const details: string[] = [];
-  for (const key of SAFE_EVENT_DETAIL_KEYS) {
-    const value = event.payload[key];
-    if (typeof value === "string" || typeof value === "number") {
-      details.push(`${key}: ${value}`);
-    }
-  }
-  return details;
-}
-
-export function formatTime(value: string): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString("tr-TR");
-}
-
 function parseChatMessage(payload: unknown): ChatMessage {
   if (!isRecord(payload)) {
     throw new Error("Sohbet mesajı bir nesne değil.");
@@ -158,18 +83,6 @@ export function parseChatConversation(payload: unknown): ChatConversation {
     id: readString(payload, "id"),
     agent_ids: readStringArray(payload, "agent_ids"),
     messages: messages.map(parseChatMessage),
-  };
-}
-
-function parseRunEvent(payload: unknown): RunEvent {
-  if (!isRecord(payload)) {
-    throw new Error("Çalıştırma olayı bir nesne değil.");
-  }
-  return {
-    sequence: readNumber(payload, "sequence"),
-    type: readString(payload, "type"),
-    payload: readRecord(payload, "payload"),
-    created_at: readString(payload, "created_at"),
   };
 }
 
