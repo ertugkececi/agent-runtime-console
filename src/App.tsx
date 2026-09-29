@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "./api/client";
+import { AgentCatalog } from "./agents/AgentCatalog";
 import { LoginScreen } from "./auth/LoginScreen";
 import { useAuthSession } from "./auth/useAuthSession";
 
@@ -36,6 +37,7 @@ export function App() {
       {health.isPending ? <p>Backend: checking…</p> : null}
       {health.isError ? <p>Backend: unreachable</p> : null}
       {health.isSuccess ? <p>Backend: {health.data.status}</p> : null}
+      <AgentCatalog />
     </main>
   );
 }
