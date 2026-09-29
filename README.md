@@ -26,7 +26,20 @@ npm run dev
 ```
 
 The backend sends no CORS headers, so the dev server proxies the contract paths
-to the backend; the proxy list lives in `vite.config.ts`.
+to the backend; the proxy list lives in `vite.config.ts`. `/auth/*` is proxied
+too, so session, sign-in, callback and logout work in development. When the
+backend runs with `AGENT_RUNTIME_AUTH_MODE=oidc`, set
+`AGENT_RUNTIME_OIDC_REDIRECT_URI=http://127.0.0.1:5173/auth/callback`: the
+backend only accepts state-changing requests whose `Origin` equals the redirect
+URI's origin.
+
+## Auth and CSRF
+
+The console reads the session from `GET /auth/session`, keeps the CSRF token
+from that response in memory, sends it as `X-CSRF-Token` on every state-changing
+request, and returns to the sign-in screen when a request answers `401`. With
+`AGENT_RUNTIME_AUTH_MODE=off` the endpoint reports `auth_enabled: false` and the
+console behaves as it did before auth existed.
 
 ## Checks
 
