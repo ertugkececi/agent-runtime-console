@@ -54,6 +54,31 @@ lowercases the typed value exactly as the backend normalises capabilities
 search. That filter returns enabled agents only, which the screen states next
 to the input.
 
+## Agent definition fields
+
+The form offers only the fields the platform API enforces, and it discovers
+what each provider supports from the API instead of keeping a provider list of
+its own:
+
+- `GET /agent-config/catalog` carries every configured provider's
+  `supports_tool_ids`, from its manifest, and `model_catalog_url` for the
+  providers the platform serves a model catalog for.
+- Model and reasoning-effort choices come from that catalog. A provider
+  without a catalog keeps a free-text model field and shows no effort control;
+  a model's `efforts` are the only efforts offered for it. A stored model or
+  effort the catalog no longer lists stays visible, so an edit cannot drop it,
+  and `model_reasoning_effort` is sent only when it changes to a new value —
+  the API drops explicit nulls, so once set it cannot be cleared.
+- Tool grants come from `GET /mcp/tools`, and only from entries the
+  administrator approved as read-only (`trusted_read_only`). A stored grant the
+  catalog no longer lists is shown with an explicit "İzni kaldır" action, and
+  the form refuses a tool change while such a grant remains. Switching to a
+  provider that declares no tool support submits an empty `tool_ids` and says
+  so before saving.
+
+This keeps the API the only gate: the console offers no value the platform
+would answer with `422`.
+
 ## Checks
 
 ```sh

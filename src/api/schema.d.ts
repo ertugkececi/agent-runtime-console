@@ -34,7 +34,7 @@ export interface paths {
         };
         /**
          * Agent Config Catalog
-         * @description Expose public provider choices and which provider has a selectable model catalog.
+         * @description Expose each configured provider's enforced capabilities, never its configuration.
          */
         get: operations["agent_config_catalog_agent_config_catalog_get"];
         put?: never;
@@ -340,6 +340,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AgentConfigCatalog
+         * @description What an agent configuration screen may rely on, and nothing more.
+         */
+        AgentConfigCatalog: {
+            /** Providers */
+            providers: components["schemas"]["AgentConfigProvider"][];
+        };
+        /**
+         * AgentConfigProvider
+         * @description One configured provider and the capabilities its manifest declares.
+         *
+         *     ``model_catalog_url`` is the contract path that lists the provider's models
+         *     and their supported reasoning efforts, or ``None`` when it has no catalog.
+         */
+        AgentConfigProvider: {
+            /** Id */
+            id: string;
+            /** Model Catalog Url */
+            model_catalog_url: string | null;
+            /** Supports Tool Ids */
+            supports_tool_ids: boolean;
+        };
         /** AgentCreate */
         AgentCreate: {
             /** Capabilities */
@@ -495,9 +518,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AgentConfigCatalog"];
                 };
             };
         };
