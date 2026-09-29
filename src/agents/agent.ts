@@ -2,10 +2,10 @@
 //
 // The platform contract types agent writes (`AgentCreate` / `AgentUpdate`) and
 // the agent-config catalog, but not agent or catalog reads: GET /agents,
-// GET /codex/models, GET /opencode/models and GET /mcp/tools answer plain
-// objects. This module narrows those payloads once, at the boundary with the
-// generated client, so the screen works with checked values instead of a
-// hand-written copy of the read schemas.
+// GET /opencode/models and GET /mcp/tools answer plain objects. This module
+// narrows those payloads once, at the boundary with the generated client, so
+// the screen works with checked values instead of a hand-written copy of the
+// read schemas.
 
 import {
   isRecord,
@@ -58,9 +58,9 @@ export interface AgentDraft {
 }
 
 /**
- * One selectable model from a provider's catalog (`GET /codex/models`,
- * `GET /opencode/models`). `efforts` are the only reasoning efforts the
- * provider supports for that model; an empty list means the model has none.
+ * One selectable model from a provider's catalog (`GET /opencode/models`).
+ * `efforts` are the only reasoning efforts the provider supports for that
+ * model; an empty list means the model has none.
  */
 export interface ModelChoice {
   id: string;

@@ -1,10 +1,11 @@
 // Field readers for the untyped payloads of the platform API.
 //
 // The contract types writes, but several reads answer plain objects:
-// GET /agents, GET /conversations/{id}, GET /runs/{id}, GET /codex/models,
-// GET /opencode/models and GET /mcp/tools. Every screen narrows those payloads
-// once, at the boundary with the generated client, through these readers; the
-// message for a wrong payload shape stays with the screen that knows it.
+// GET /agents, GET /conversations/{id}, GET /runs/{id}, GET /opencode/models,
+// GET /mcp/tools, GET /opencode/integrations and
+// GET /opencode/connections/{id}. Every screen narrows those payloads once, at
+// the boundary with the generated client, through these readers; the message
+// for a wrong payload shape stays with the screen that knows it.
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

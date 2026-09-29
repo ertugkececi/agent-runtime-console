@@ -7,17 +7,19 @@ import { AgentCatalog } from "./agents/AgentCatalog";
 import { LoginScreen } from "./auth/LoginScreen";
 import { useAuthSession } from "./auth/useAuthSession";
 import { ChatScreen } from "./chat/ChatScreen";
+import { ConnectionScreen } from "./connections/ConnectionScreen";
 import { GraphScreen } from "./graph/GraphScreen";
 import { RoomScreen } from "./rooms/RoomScreen";
 import { ErrorState, LoadingState } from "./ui/Status";
 
-type Screen = "chat" | "rooms" | "agents" | "graph";
+type Screen = "chat" | "rooms" | "agents" | "graph" | "connections";
 
 const SCREEN_LABELS: Record<Screen, string> = {
   chat: "Sohbet",
   rooms: "Grup odaları",
   agents: "Ajanlar",
   graph: "Graf",
+  connections: "Sağlayıcı",
 };
 
 export function App() {
@@ -111,8 +113,10 @@ export function App() {
           <RoomScreen />
         ) : screen === "agents" ? (
           <AgentCatalog />
-        ) : (
+        ) : screen === "graph" ? (
           <GraphScreen />
+        ) : (
+          <ConnectionScreen />
         )}
       </main>
     </div>
