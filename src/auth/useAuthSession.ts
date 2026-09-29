@@ -8,7 +8,7 @@ import {
   setCsrfToken,
 } from "./session";
 
-export type AuthState = "loading" | "off" | "anonymous" | "authenticated";
+export type AuthState = "loading" | "off" | "anonymous" | "authenticated" | "error";
 
 export function useAuthSession() {
   const queryClient = useQueryClient();
@@ -31,12 +31,21 @@ export function useAuthSession() {
     await queryClient.invalidateQueries({ queryKey: AUTH_SESSION_QUERY_KEY });
   }, [queryClient]);
 
+  const { refetch } = session;
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  // An unreachable session endpoint is its own state: assuming auth is off
+  // would show the console as if it were unauthenticated.
   let state: AuthState = "off";
   if (session.isPending) {
     state = "loading";
+  } else if (session.isError) {
+    state = "error";
   } else if (session.data?.auth_enabled) {
     state = session.data.authenticated ? "authenticated" : "anonymous";
   }
 
-  return { state, signOut };
+  return { state, signOut, error: session.error, retry };
 }

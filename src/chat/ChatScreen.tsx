@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAgentList } from "../agents/useAgents";
+import { errorText } from "../api/errorMessage";
 import { isActiveStatus, isTerminalStatus, runStatusLabel } from "../runs/run";
 import { CONVERSATION_STORAGE_KEY } from "../storage";
+import { EmptyState, ErrorState, LoadingState, StatusLine } from "../ui/Status";
 import { newestRunId, type ChatMessage } from "./chat";
 import { RunTimeline } from "./RunTimeline";
 import {
@@ -19,10 +21,6 @@ import {
 // is what makes the history load; the agent id keeps the picker where the user
 // left it.
 const AGENT_STORAGE_KEY = "agentRuntimeConsoleAgentId";
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "Bilinmeyen hata.";
-}
 
 export function ChatScreen() {
   const queryClient = useQueryClient();
@@ -168,15 +166,17 @@ export function ChatScreen() {
   }
 
   return (
-    <section aria-labelledby="chat-heading">
-      <h2 id="chat-heading">Sohbet</h2>
+    <section className="screen" aria-labelledby="chat-heading">
+      <h2 id="chat-heading" tabIndex={-1}>
+        Sohbet
+      </h2>
       <p>
         Etkin bir ajanla insan-ajan sohbeti. Gönderim kuyruğa alınır; çalıştırma durumu ve
         olayları bu ekranda canlı izlenir.
       </p>
-      {agentsQuery.isPending ? <p>Ajanlar yükleniyor…</p> : null}
+      {agentsQuery.isPending ? <LoadingState>Ajanlar yükleniyor…</LoadingState> : null}
       {agentsQuery.isError ? (
-        <p role="alert">Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</p>
+        <ErrorState>Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</ErrorState>
       ) : null}
       <p>
         <label htmlFor="chat-agent">Ajan</label>{" "}
@@ -198,13 +198,13 @@ export function ChatScreen() {
         </button>
       </p>
       {conversationFailed ? (
-        <p role="alert">Sohbet yüklenemedi: {errorText(conversationQuery.error)}</p>
+        <ErrorState>Sohbet yüklenemedi: {errorText(conversationQuery.error)}</ErrorState>
       ) : null}
       <h3>{conversation !== null ? "Sohbet geçmişi" : "Yeni sohbet"}</h3>
       {conversationLoading ? (
-        <p>Sohbet yükleniyor…</p>
+        <LoadingState>Sohbet yükleniyor…</LoadingState>
       ) : messages.length === 0 ? (
-        <p>Henüz mesaj yok.</p>
+        <EmptyState>Henüz mesaj yok.</EmptyState>
       ) : (
         <ol aria-label="Sohbet mesajları">
           {messages.map((message) => (
@@ -217,7 +217,6 @@ export function ChatScreen() {
       <form onSubmit={(event) => void handleSubmit(event)}>
         <p>
           <label htmlFor="chat-message">Mesaj</label>
-          <br />
           <textarea
             id="chat-message"
             rows={3}
@@ -232,11 +231,11 @@ export function ChatScreen() {
           </button>
         </p>
       </form>
-      <p role="status">{statusLine}</p>
+      <StatusLine>{statusLine}</StatusLine>
       {busy ? <p>Çalıştırma sürüyor; ikinci mesaj için tamamlanmasını bekle.</p> : null}
-      {error !== null ? <p role="alert">{error}</p> : null}
+      {error !== null ? <ErrorState>{error}</ErrorState> : null}
       {runQuery.isError ? (
-        <p role="alert">Çalıştırma durumu alınamadı: {errorText(runQuery.error)}</p>
+        <ErrorState>Çalıştırma durumu alınamadı: {errorText(runQuery.error)}</ErrorState>
       ) : null}
       {run !== null ? <RunTimeline run={run} /> : null}
     </section>

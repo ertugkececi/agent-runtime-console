@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAgentList } from "../agents/useAgents";
+import { errorText } from "../api/errorMessage";
 import { isActiveStatus, isTerminalStatus, runStatusLabel } from "../runs/run";
 import {
   ACTIVE_ROOM_STORAGE_KEY,
@@ -9,6 +10,7 @@ import {
   writeSavedRooms,
   type SavedRoom,
 } from "../storage";
+import { EmptyState, ErrorState, LoadingState, StatusLine } from "../ui/Status";
 import { RoomRunView } from "./RoomRunView";
 import {
   ROOM_RUNS_QUERY_KEY,
@@ -22,8 +24,10 @@ import {
 const MIN_PARTICIPANTS = 2;
 const MAX_PARTICIPANTS = 5;
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "Bilinmeyen hata.";
+type MoveDirection = "up" | "down";
+
+function moveButtonId(agentId: string, direction: MoveDirection): string {
+  return `room-move-${direction}-${agentId}`;
 }
 
 export function RoomScreen() {
@@ -49,6 +53,12 @@ export function RoomScreen() {
   const [taskDraft, setTaskDraft] = useState("");
   const [acceptedRunId, setAcceptedRunId] = useState<string | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
+
+  // Opening or creating a room moves focus to the room view heading, so the
+  // keyboard flow continues in the panel that just changed.
+  const roomViewHeadingRef = useRef<HTMLHeadingElement>(null);
+  // The arrow that was pressed before a reorder; see the effect below.
+  const pendingMoveFocus = useRef<{ agentId: string; direction: MoveDirection } | null>(null);
 
   const agentsQuery = useAgentList("");
   const agents = agentsQuery.data ?? [];
@@ -111,6 +121,26 @@ export function RoomScreen() {
     writeSavedRooms(savedRooms);
   }, [savedRooms]);
 
+  // A moved participant can disable the arrow that had focus (it is the first
+  // or the last row now); focus then moves to the other arrow of that row, so
+  // the order stays editable without tabbing back from the document.
+  useEffect(() => {
+    const pending = pendingMoveFocus.current;
+    if (pending === null) {
+      return;
+    }
+    pendingMoveFocus.current = null;
+    const pressed = document.getElementById(moveButtonId(pending.agentId, pending.direction));
+    if (pressed instanceof HTMLButtonElement && !pressed.disabled) {
+      return;
+    }
+    const other: MoveDirection = pending.direction === "up" ? "down" : "up";
+    const fallback = document.getElementById(moveButtonId(pending.agentId, other));
+    if (fallback instanceof HTMLButtonElement && !fallback.disabled) {
+      fallback.focus();
+    }
+  }, [participantIds]);
+
   function rememberRoom(room: SavedRoom) {
     setSavedRooms((current) => [room, ...current.filter((item) => item.id !== room.id)]);
   }
@@ -125,6 +155,7 @@ export function RoomScreen() {
     setAcceptedRunId(null);
     setTaskDraft("");
     setRoomError(null);
+    requestAnimationFrame(() => roomViewHeadingRef.current?.focus());
   }
 
   function toggleParticipant(agentId: string, checked: boolean) {
@@ -142,16 +173,18 @@ export function RoomScreen() {
     });
   }
 
-  function moveParticipant(index: number, step: number) {
+  function moveParticipant(agentId: string, direction: MoveDirection) {
+    const index = participantIds.indexOf(agentId);
+    const target = index + (direction === "up" ? -1 : 1);
+    if (index === -1 || target < 0 || target >= participantIds.length) {
+      return;
+    }
     setParticipantIds((current) => {
-      const target = index + step;
-      if (target < 0 || target >= current.length) {
-        return current;
-      }
       const next = [...current];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+    pendingMoveFocus.current = { agentId, direction };
   }
 
   const canCreateRoom =
@@ -220,8 +253,10 @@ export function RoomScreen() {
     agents.find((agent) => agent.id === agentId)?.name ?? agentId;
 
   return (
-    <section aria-labelledby="rooms-heading">
-      <h2 id="rooms-heading">Grup odaları</h2>
+    <section className="screen" aria-labelledby="rooms-heading">
+      <h2 id="rooms-heading" tabIndex={-1}>
+        Grup odaları
+      </h2>
       <p>
         Sınırlı bir grup odasında 2–5 etkin ajanı sırayla çalıştır; katkıları ve
         moderatörün son yanıtını izle. Oda kayıtları sunucuda, oda kimlikleri bu
@@ -234,17 +269,16 @@ export function RoomScreen() {
           Ajanları seçtiğin sıra konuşma sırasıdır; oklarla değiştirebilirsin. Bir odaya en az
           iki, en fazla beş ajan katılır ve moderatör katılımcılardan biri olur.
         </p>
-        {agentsQuery.isPending ? <p>Ajanlar yükleniyor…</p> : null}
+        {agentsQuery.isPending ? <LoadingState>Ajanlar yükleniyor…</LoadingState> : null}
         {agentsQuery.isError ? (
-          <p role="alert">Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</p>
+          <ErrorState>Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</ErrorState>
         ) : null}
         {agentsQuery.isSuccess && enabledAgents.length === 0 ? (
-          <p>Grup odası oluşturmak için önce bir ajan oluştur.</p>
+          <EmptyState>Grup odası oluşturmak için önce bir ajan oluştur.</EmptyState>
         ) : null}
         <form onSubmit={(event) => void handleCreateRoom(event)}>
           <p>
             <label htmlFor="room-name">Oda adı</label>
-            <br />
             <input
               id="room-name"
               maxLength={120}
@@ -290,17 +324,19 @@ export function RoomScreen() {
                   </span>{" "}
                   <button
                     type="button"
+                    id={moveButtonId(agentId, "up")}
                     aria-label={`${nameOf(agentId)} sırasını yukarı taşı`}
                     disabled={index === 0}
-                    onClick={() => moveParticipant(index, -1)}
+                    onClick={() => moveParticipant(agentId, "up")}
                   >
                     ↑
                   </button>{" "}
                   <button
                     type="button"
+                    id={moveButtonId(agentId, "down")}
                     aria-label={`${nameOf(agentId)} sırasını aşağı taşı`}
                     disabled={index === participantIds.length - 1}
-                    onClick={() => moveParticipant(index, 1)}
+                    onClick={() => moveParticipant(agentId, "down")}
                   >
                     ↓
                   </button>
@@ -332,13 +368,13 @@ export function RoomScreen() {
             </button>
           </p>
         </form>
-        {createError !== null ? <p role="alert">{createError}</p> : null}
+        {createError !== null ? <ErrorState>{createError}</ErrorState> : null}
       </section>
 
       <section aria-labelledby="room-open-heading">
         <h3 id="room-open-heading">Kayıtlı odalar</h3>
         {savedRooms.length === 0 ? (
-          <p>Bu tarayıcıda kayıtlı oda yok.</p>
+          <EmptyState>Bu tarayıcıda kayıtlı oda yok.</EmptyState>
         ) : (
           <p>
             <label htmlFor="room-open-select">Oda</label>{" "}
@@ -366,13 +402,15 @@ export function RoomScreen() {
       </section>
 
       <section aria-labelledby="room-view-heading">
-        <h3 id="room-view-heading">{room !== null ? room.name : "Grup odası"}</h3>
+        <h3 id="room-view-heading" ref={roomViewHeadingRef} tabIndex={-1}>
+          {room !== null ? room.name : "Grup odası"}
+        </h3>
         {activeRoomId === null ? (
-          <p>Henüz açık bir oda yok. Bir oda oluştur veya kayıtlı odalardan birini aç.</p>
+          <EmptyState>Henüz açık bir oda yok. Bir oda oluştur veya kayıtlı odalardan birini aç.</EmptyState>
         ) : null}
-        {roomLoading ? <p>Oda yükleniyor…</p> : null}
+        {roomLoading ? <LoadingState>Oda yükleniyor…</LoadingState> : null}
         {roomQuery.isError ? (
-          <p role="alert">Oda yüklenemedi: {errorText(roomQuery.error)}</p>
+          <ErrorState>Oda yüklenemedi: {errorText(roomQuery.error)}</ErrorState>
         ) : null}
         {room !== null ? (
           <>
@@ -380,7 +418,6 @@ export function RoomScreen() {
             <form onSubmit={(event) => void handleSendTask(event)}>
               <p>
                 <label htmlFor="room-task">Görev</label>
-                <br />
                 <textarea
                   id="room-task"
                   rows={3}
@@ -395,12 +432,12 @@ export function RoomScreen() {
                 </button>
               </p>
             </form>
-            <p role="status">{statusLine}</p>
+            <StatusLine>{statusLine}</StatusLine>
             {busy ? <p>Grup görevi sürüyor; ikinci görev için tamamlanmasını bekle.</p> : null}
             <h4>Görev ve çalıştırma geçmişi</h4>
-            {runsQuery.isPending ? <p>Geçmiş yükleniyor…</p> : null}
+            {runsQuery.isPending ? <LoadingState>Geçmiş yükleniyor…</LoadingState> : null}
             {shownRuns.length === 0 && runsQuery.isSuccess ? (
-              <p>Bu odada henüz görev yok.</p>
+              <EmptyState>Bu odada henüz görev yok.</EmptyState>
             ) : null}
             <ol aria-label="Grup odası çalıştırmaları">
               {shownRuns.map((run) => (
@@ -410,14 +447,16 @@ export function RoomScreen() {
               ))}
             </ol>
             {runsQuery.isError ? (
-              <p role="alert">Görev geçmişi yüklenemedi: {errorText(runsQuery.error)}</p>
+              <ErrorState>Görev geçmişi yüklenemedi: {errorText(runsQuery.error)}</ErrorState>
             ) : null}
             {watchedRunQuery.isError ? (
-              <p role="alert">Çalıştırma durumu alınamadı: {errorText(watchedRunQuery.error)}</p>
+              <ErrorState>
+                Çalıştırma durumu alınamadı: {errorText(watchedRunQuery.error)}
+              </ErrorState>
             ) : null}
           </>
         ) : null}
-        {roomError !== null ? <p role="alert">{roomError}</p> : null}
+        {roomError !== null ? <ErrorState>{roomError}</ErrorState> : null}
       </section>
     </section>
   );

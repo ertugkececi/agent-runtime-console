@@ -1,5 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { errorText } from "../api/errorMessage";
+import { EmptyState, ErrorState, LoadingState, StatusLine } from "../ui/Status";
 import { AgentForm } from "./AgentForm";
 import { normalizeCapability, type AgentDraft } from "./agent";
 import { useAgentList, useCreateAgent, useProviderCatalog, useUpdateAgent } from "./useAgents";
@@ -13,10 +15,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
     return () => clearTimeout(timer);
   }, [value, delayMs]);
   return debounced;
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : "Bilinmeyen hata.";
 }
 
 export function AgentCatalog() {
@@ -35,6 +33,16 @@ export function AgentCatalog() {
   const [status, setStatus] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // The details area sits below the whole agent list; moving focus to its
+  // heading when it changes subject keeps the create/edit flow one Tab away
+  // instead of a walk through every list item.
+  const detailsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+
+  function focusDetails() {
+    requestAnimationFrame(() => detailsHeadingRef.current?.focus());
+  }
+
   const agents = agentsQuery.data ?? [];
   const providers = providersQuery.data ?? [];
   const selected = agents.find((agent) => agent.id === selectedId) ?? null;
@@ -44,6 +52,7 @@ export function AgentCatalog() {
     setSelectedId(agentId);
     setStatus(null);
     setFormError(null);
+    focusDetails();
   }
 
   function startCreate() {
@@ -51,12 +60,15 @@ export function AgentCatalog() {
     setSelectedId(null);
     setStatus(null);
     setFormError(null);
+    focusDetails();
   }
 
   function cancelCreate() {
     setCreating(false);
     setStatus(null);
     setFormError(null);
+    // The form was opened from this button, so cancelling returns focus to it.
+    requestAnimationFrame(() => createButtonRef.current?.focus());
   }
 
   async function handleCreate(draft: AgentDraft) {
@@ -70,6 +82,7 @@ export function AgentCatalog() {
       // agent that was just created even when its capability does not match.
       setFilterInput("");
       setStatus(created.enabled ? "Ajan oluşturuldu." : "Ajan oluşturuldu; devre dışı olarak listelenir.");
+      focusDetails();
     } catch (error) {
       setFormError(errorText(error));
     }
@@ -84,6 +97,9 @@ export function AgentCatalog() {
     setFormError(null);
     try {
       const updated = await updateAgent.mutateAsync({ agent: selected, draft });
+      // A save rebuilds the form from the API response; focus is put back on
+      // the details heading because the button that had it is replaced.
+      focusDetails();
       if (updated === null) {
         setStatus("Değişiklik yapılmadı.");
         return;
@@ -106,11 +122,13 @@ export function AgentCatalog() {
   let details: ReactNode;
   if (creating) {
     if (providersQuery.isPending) {
-      details = <p>Sağlayıcılar yükleniyor…</p>;
+      details = <LoadingState>Sağlayıcılar yükleniyor…</LoadingState>;
     } else if (providersQuery.isError) {
-      details = <p role="alert">Sağlayıcılar yüklenemedi: {errorText(providersQuery.error)}</p>;
+      details = (
+        <ErrorState>Sağlayıcılar yüklenemedi: {errorText(providersQuery.error)}</ErrorState>
+      );
     } else if (providers.length === 0) {
-      details = <p>Yapılandırılmış model sağlayıcısı yok; ajan oluşturulamaz.</p>;
+      details = <EmptyState>Yapılandırılmış model sağlayıcısı yok; ajan oluşturulamaz.</EmptyState>;
     } else {
       details = (
         <AgentForm
@@ -140,12 +158,14 @@ export function AgentCatalog() {
       />
     );
   } else {
-    details = <p>Düzenlemek için listeden bir ajan seç.</p>;
+    details = <EmptyState>Düzenlemek için listeden bir ajan seç.</EmptyState>;
   }
 
   return (
-    <section aria-labelledby="agent-catalog-heading">
-      <h2 id="agent-catalog-heading">Ajan kataloğu</h2>
+    <section className="screen" aria-labelledby="agent-catalog-heading">
+      <h2 id="agent-catalog-heading" tabIndex={-1}>
+        Ajan kataloğu
+      </h2>
       <p>
         Kayıtlı ajanları listeler, yeteneğe göre arar, oluşturur ve düzenler. Ajanlar
         silinmez; kullanımdan çıkarmak için devre dışı bırakılır.
@@ -166,17 +186,19 @@ export function AgentCatalog() {
         </small>
       </p>
       <p>
-        <button type="button" onClick={startCreate}>
+        <button type="button" ref={createButtonRef} onClick={startCreate}>
           Yeni ajan
         </button>
       </p>
-      {status ? <p role="status">{status}</p> : null}
-      {agentsQuery.isPending ? <p>Ajanlar yükleniyor…</p> : null}
+      {status !== null ? <StatusLine>{status}</StatusLine> : null}
+      {agentsQuery.isPending ? <LoadingState>Ajanlar yükleniyor…</LoadingState> : null}
       {agentsQuery.isError ? (
-        <p role="alert">Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</p>
+        <ErrorState>Ajanlar yüklenemedi: {errorText(agentsQuery.error)}</ErrorState>
       ) : null}
       {agentsQuery.isSuccess && agents.length === 0 ? (
-        <p>{capability ? "Bu yetenekle eşleşen etkin ajan yok." : "Henüz ajan yok."}</p>
+        <EmptyState>
+          {capability ? "Bu yetenekle eşleşen etkin ajan yok." : "Henüz ajan yok."}
+        </EmptyState>
       ) : null}
       <ul>
         {agents.map((agent) => (
@@ -193,7 +215,9 @@ export function AgentCatalog() {
           </li>
         ))}
       </ul>
-      <h3>{creating ? "Yeni ajan" : selected ? selected.name : "Ajan ayrıntıları"}</h3>
+      <h3 ref={detailsHeadingRef} tabIndex={-1}>
+        {creating ? "Yeni ajan" : selected ? selected.name : "Ajan ayrıntıları"}
+      </h3>
       {details}
     </section>
   );

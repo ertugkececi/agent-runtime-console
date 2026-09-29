@@ -22,64 +22,30 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import { errorText } from "../api/errorMessage";
+import { ErrorState, LoadingState } from "../ui/Status";
 import { layoutGraph, type GraphNodeSize } from "./elk";
 import { graphNodeStatusLabel, type GraphNode, type GraphView } from "./graph";
 
 type GraphNodeData = { view: GraphNode; selected: boolean; direction: "DOWN" | "RIGHT" };
 
-const KIND_STYLES: Record<GraphNode["kind"], { background: string; border: string }> = {
-  agent: { background: "#eef4ff", border: "#4f6bed" },
-  capability: { background: "#eafaef", border: "#3f9d5a" },
-  run: { background: "#f5f0ff", border: "#7a5af8" },
-  turn: { background: "#fff6e8", border: "#c98a2b" },
-};
-
 function GraphNodeCard({ data }: NodeProps) {
   const view = data.view as GraphNode;
   const selected = data.selected === true;
   const direction = data.direction === "RIGHT" ? "RIGHT" : "DOWN";
-  const palette = KIND_STYLES[view.kind];
   const status = graphNodeStatusLabel(view);
 
   return (
-    <div
-      style={{
-        boxSizing: "border-box",
-        width: "100%",
-        height: "100%",
-        padding: "6px 8px",
-        overflow: "hidden",
-        background: palette.background,
-        border: `${selected ? 3 : 1}px solid ${selected ? "#1d4ed8" : palette.border}`,
-        borderRadius: 6,
-        fontFamily: "inherit",
-      }}
-    >
+    <div className="graph-node" data-kind={view.kind} data-selected={selected}>
       <Handle
         type="target"
         position={direction === "RIGHT" ? Position.Left : Position.Top}
         isConnectable={false}
         style={{ opacity: 0 }}
       />
-      <div
-        style={{
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-          fontSize: 13,
-          fontWeight: 600,
-          lineHeight: 1.2,
-        }}
-      >
-        {view.label}
-      </div>
-      {view.subtitle !== null ? (
-        <div style={{ fontSize: 11, color: "#444", lineHeight: 1.25 }}>{view.subtitle}</div>
-      ) : null}
-      {status !== null ? (
-        <div style={{ fontSize: 11, color: "#222", fontWeight: 600 }}>{status}</div>
-      ) : null}
+      <div className="graph-node__label">{view.label}</div>
+      {view.subtitle !== null ? <div className="graph-node__meta">{view.subtitle}</div> : null}
+      {status !== null ? <div className="graph-node__status">{status}</div> : null}
       <Handle
         type="source"
         position={direction === "RIGHT" ? Position.Right : Position.Bottom}
@@ -146,6 +112,11 @@ function GraphCanvasInner({ view, direction, selectedId, onSelect }: GraphCanvas
     direction: "DOWN" | "RIGHT";
     positions: Positions;
   } | null>(null);
+  // A failed layout is remembered with the view it belongs to, so switching
+  // views clears it without a state update inside the effect.
+  const [layoutFailure, setLayoutFailure] = useState<{ key: string; message: string } | null>(
+    null,
+  );
 
   // The effect reads the view through a ref so the layout is keyed on the
   // signature, not on an array identity a parent render could change.
@@ -157,25 +128,38 @@ function GraphCanvasInner({ view, direction, selectedId, onSelect }: GraphCanvas
 
   useEffect(() => {
     let cancelled = false;
-    void layoutGraph(viewRef.current, direction).then((laidOut) => {
-      if (cancelled) {
-        return;
-      }
-      setComputed({
-        signature,
-        direction,
-        positions: new Map(
-          laidOut.nodes.map((item) => [
-            item.node.id,
-            { x: item.position.x, y: item.position.y, ...item.size },
-          ]),
-        ),
+    void layoutGraph(viewRef.current, direction)
+      .then((laidOut) => {
+        if (cancelled) {
+          return;
+        }
+        setComputed({
+          signature,
+          direction,
+          positions: new Map(
+            laidOut.nodes.map((item) => [
+              item.node.id,
+              { x: item.position.x, y: item.position.y, ...item.size },
+            ]),
+          ),
+        });
+      })
+      .catch((error: unknown) => {
+        // Without a layout there is nothing to draw; the screen says so
+        // instead of waiting for positions that are never computed.
+        if (!cancelled) {
+          setLayoutFailure({ key: `${direction}|${signature}`, message: errorText(error) });
+        }
       });
-    });
     return () => {
       cancelled = true;
     };
   }, [signature, direction]);
+
+  const layoutError =
+    layoutFailure !== null && layoutFailure.key === `${direction}|${signature}`
+      ? layoutFailure.message
+      : null;
 
   const ready =
     computed !== null && computed.signature === signature && computed.direction === direction;
@@ -198,8 +182,11 @@ function GraphCanvasInner({ view, direction, selectedId, onSelect }: GraphCanvas
     };
   }, [computed, ready, reactFlow]);
 
+  if (layoutError !== null) {
+    return <ErrorState>Graf yerleşimi hesaplanamadı: {layoutError}</ErrorState>;
+  }
   if (!ready) {
-    return <p role="status">Graf yerleşimi hesaplanıyor…</p>;
+    return <LoadingState>Graf yerleşimi hesaplanıyor…</LoadingState>;
   }
 
   const positions = computed.positions;
@@ -232,7 +219,7 @@ function GraphCanvasInner({ view, direction, selectedId, onSelect }: GraphCanvas
   }));
 
   return (
-    <div style={{ height: 480, border: "1px solid #bbb" }}>
+    <div className="graph-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}

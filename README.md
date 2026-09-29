@@ -156,6 +156,37 @@ between them, Enter or Space selects, every node carries a readable
 `aria-label`, and the canvas is followed by a text summary of its nodes and
 edges.
 
+## Design system and accessibility
+
+`src/ui/theme.css` is the only palette: design tokens, base element styles and
+the shared classes (`.screen`, `.status`, `.graph-node`, …). No screen defines
+its own colors, and the token comments record the contrast pair each color was
+chosen for (normal text 4.5:1, UI borders 3:1). Every interactive element gets
+one visible `:focus-visible` ring, including the graph nodes, whose own
+stylesheet turns the outline off.
+
+`src/ui/Status.tsx` holds the four message states every screen uses, so the
+semantics are uniform: `LoadingState` and `StatusLine` are polite live regions,
+`ErrorState` is an assertive alert, `EmptyState` is plain text. Each screen
+defines its loading, empty and error states that way:
+
+- **Session** — loading, unreachable (with a retry), unauthorized (the sign-in
+  screen), and an unreachable backend shown in the header.
+- **Chat** — agents, conversation, run and send states; an empty history.
+- **Rooms** — agents, room, run history and run states; no saved rooms, no open
+  room, no task yet.
+- **Agents** — catalog, provider, model and tool states; no agents, no filter
+  match, no selection; save failures.
+- **Graph** — agents, conversation, run, room and room-run states; no data per
+  view; a layout that cannot be computed.
+
+Keyboard and focus: the first Tab stop jumps over the navigation to the main
+content; switching screens moves focus to the new screen's heading; opening or
+selecting an agent, opening a room and selecting a graph node move focus to the
+panel that just changed, and a reorder keeps focus on the moved participant's
+arrows; errors and progress changes are announced through their live regions.
+The document language is Turkish (`index.html`).
+
 ## Checks
 
 ```sh
