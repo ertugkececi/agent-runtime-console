@@ -41,6 +41,19 @@ request, and returns to the sign-in screen when a request answers `401`. With
 `AGENT_RUNTIME_AUTH_MODE=off` the endpoint reports `auth_enabled: false` and the
 console behaves as it did before auth existed.
 
+## Agent catalog
+
+The catalog lists every registered agent, disabled ones included. Disabling is
+a `PATCH /agents/{id}` with `enabled: false`; the console never deletes an
+agent, so conversations, tasks and run snapshots keep the references they
+recorded.
+
+The capability filter calls `GET /agents?capability=...`. It trims and
+lowercases the typed value exactly as the backend normalises capabilities
+(`strip().casefold()`), so the match is an exact value match, not a substring
+search. That filter returns enabled agents only, which the screen states next
+to the input.
+
 ## Checks
 
 ```sh
