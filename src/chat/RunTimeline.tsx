@@ -1,4 +1,5 @@
-import { eventDetails, eventLabel, formatTime, runStatusLabel, type ChatRun } from "./chat";
+import { runStatusLabel } from "../runs/run";
+import { eventDetails, eventLabel, formatTime, type ChatRun } from "./chat";
 
 /**
  * The live status and `run_events` timeline of one run. The status paragraph is

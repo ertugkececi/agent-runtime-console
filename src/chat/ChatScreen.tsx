@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAgentList } from "../agents/useAgents";
-import { isActiveStatus, isTerminalStatus, newestRunId, runStatusLabel, type ChatMessage } from "./chat";
+import { isActiveStatus, isTerminalStatus, runStatusLabel } from "../runs/run";
+import { newestRunId, type ChatMessage } from "./chat";
 import { RunTimeline } from "./RunTimeline";
 import {
   CONVERSATIONS_QUERY_KEY,
